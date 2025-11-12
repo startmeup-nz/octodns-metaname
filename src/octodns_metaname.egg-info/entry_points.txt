@@ -1,2 +1,0 @@
-[octodns.providers]
-metaname = octodns_metaname:MetanameProvider
