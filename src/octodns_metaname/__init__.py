@@ -83,7 +83,7 @@ class MetanameProvider(BaseProvider):
         retries: int = 3,
         retry_backoff: float = 1.0,
         sleep: Callable[[float], None] = time.sleep,
-        record_factory: Optional[Callable[[Any, str, Dict[str, Any], Any], Any]] = None,
+        record_factory: Optional[Callable[..., Any]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(id, **kwargs)

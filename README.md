@@ -1,21 +1,29 @@
-# octodns-metaname (prototype)
+# octodns-metaname
 
-Experimental OctoDNS provider for the [Metaname](https://metaname.net) DNS API.
-This package originates from the upstream [`octodns-template`](https://github.com/octodns/octodns-template)
-scaffold and is now maintained as part of the public OpsDev.nz automation toolkit.
+OctoDNS provider for the [Metaname](https://metaname.net) DNS API, originally
+bootstrapped from the upstream [`octodns-template`](https://github.com/octodns/octodns-template).
+Use it to run a DNS-as-Code workflow with OctoDNS for any zones you host at
+Metaname.
 
-## Local setup
+## Installation
+
+PyPI release:
 
 ```bash
-cd modules/octodns_metaname
-python -m venv .venv && source .venv/bin/activate
-pip install -e .[dev]
+pip install octodns-metaname
 ```
 
-## Testing
+If you rely on the OpsDev.nz 1Password resolver, install the optional extra:
 
 ```bash
-pytest
+pip install octodns-metaname[onepassword]
+```
+
+Editable install for local development:
+
+```bash
+python -m venv venv && source venv/bin/activate
+pip install -e .[dev]
 ```
 
 ## OctoDNS integration
@@ -30,7 +38,9 @@ providers:
     base_url: https://test.metaname.net/api/1.1
 ```
 
-Populate/apply workflows follow the standard OctoDNS CLI tools.
+Populate/apply workflows follow the standard OctoDNS CLI tools. Consult the
+[OctoDNS docs](https://github.com/octodns/octodns/wiki/Usage) for full CLI
+details.
 
 ### Secret resolution
 
@@ -48,6 +58,27 @@ secrets.set_secret_resolver(resolve)
 ```
 
 For CLI usage set `OCTODNS_METANAME_SECRET_RESOLVER="module:function"` so the
-resolver is loaded automatically. The OpsDev.nz deployment points this at
-`op_opsdevnz.octodns_hooks:resolve` which unwraps `op://…` references via the
-1Password CLI.
+resolver is loaded automatically. OpsDev.nz deployments point this at
+`op_opsdevnz.octodns_hooks:resolve`, which returns values directly from the
+1Password Service Account SDK/CLI.
+
+## Development
+
+```bash
+python -m venv venv && source venv/bin/activate
+pip install -e .[dev]
+ruff check src tests
+mypy src
+pytest --maxfail=1
+```
+
+The repo includes a GitHub Actions workflow that runs linting, type checking,
+tests, and a build on every push.
+
+## Releasing
+
+See [RELEASING.md](RELEASING.md) for the full TestPyPI → PyPI checklist.
+
+## License
+
+Apache-2.0 © OpsDev.nz
