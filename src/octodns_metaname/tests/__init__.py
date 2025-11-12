@@ -8,9 +8,11 @@ MkDocStrings, we load them dynamically and register them under the
 """
 
 import sys
+from importlib.abc import Loader
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
+from typing import cast
 
 _BASE = Path(__file__).resolve().parent.parent.parent.parent / "tests"
 
@@ -22,7 +24,8 @@ def _load(module_name: str) -> ModuleType:
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load test module: {module_name}")
     module = module_from_spec(spec)
-    spec.loader.exec_module(module)  # type: ignore[attr-defined]
+    loader = cast(Loader, spec.loader)
+    loader.exec_module(module)
     sys.modules[f"octodns_metaname.tests.{module_name}"] = module
     return module
 

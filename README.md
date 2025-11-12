@@ -1,8 +1,9 @@
 # octodns-metaname
 
-OctoDNS provider for the [Metaname](https://metaname.net) DNS API maintained by
-the OpsDev.nz collective. It ships as a standalone package so OctoDNS
-deployments can manage Metaname zones without cloning the OpsDev.nz monorepo.
+OctoDNS provider for the [Metaname](https://metaname.net) DNS API, originally
+bootstrapped from the upstream [`octodns-template`](https://github.com/octodns/octodns-template).
+Use it to run a DNS-as-Code workflow with OctoDNS for any zones you host at
+Metaname.
 
 ## Installation
 

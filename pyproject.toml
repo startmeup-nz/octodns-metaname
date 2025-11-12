@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "octodns-metaname"
-version = "0.1.0"
+version = "0.1.1"
 description = "OpsDev.nz OctoDNS provider for the Metaname DNS API"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -44,6 +44,7 @@ dev = [
   "ruff>=0.6.5",
   "twine>=5.1.1",
   "vcrpy>=6.0.1",
+  "types-requests>=2.31.0.20240218",
 ]
 test = [
   "pytest>=8.3.0",

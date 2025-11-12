@@ -10,7 +10,7 @@ secret or ``None`` when it cannot help.
 
 import importlib
 import os
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 
 Resolver = Callable[[str, Optional[str]], Optional[str]]
 
@@ -43,7 +43,11 @@ def _ensure_resolver_loaded() -> None:
             )
         module = importlib.import_module(module_name)
         resolver = getattr(module, attr)
-        _secret_resolver = resolver  # type: ignore[assignment]
+        if not callable(resolver):
+            raise MissingSecret(
+                f"Resolver '{attr}' inside {module_name} must be callable; got {type(resolver)!r}"
+            )
+        _secret_resolver = cast(Resolver, resolver)
     _resolver_loaded = True
 
 

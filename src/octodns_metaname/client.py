@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 """Thin wrapper around the Metaname JSON-RPC API used by OctoDNS."""
 
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional, Union, cast
 
 import requests
 
@@ -207,31 +209,34 @@ class MetanameClient:
             yield ZoneRecord.from_api(item)
 
     def create_zone_record(
-        self, domain: str, record: ZoneRecord | Dict[str, Any]
+        self, domain: str, record: Union[ZoneRecord, Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Create a DNS record within ``domain``."""
 
         domain = _strip_trailing_dot(domain)
         payload = record.to_api_payload() if isinstance(record, ZoneRecord) else dict(record)
-        return self._rpc("create_dns_record", [domain, payload])
+        response = self._rpc("create_dns_record", [domain, payload])
+        return cast(Dict[str, Any], response)
 
     def update_zone_record(
         self,
         domain: str,
         reference: str,
-        record: ZoneRecord | Dict[str, Any],
+        record: Union[ZoneRecord, Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Update an existing record identified by ``reference``."""
 
         domain = _strip_trailing_dot(domain)
         payload = record.to_api_payload() if isinstance(record, ZoneRecord) else dict(record)
-        return self._rpc("update_dns_record", [domain, reference, payload])
+        response = self._rpc("update_dns_record", [domain, reference, payload])
+        return cast(Dict[str, Any], response)
 
     def delete_zone_record(self, domain: str, reference: str) -> Dict[str, Any]:
         """Delete a record from ``domain`` by ``reference``."""
 
         domain = _strip_trailing_dot(domain)
-        return self._rpc("delete_dns_record", [domain, reference])
+        response = self._rpc("delete_dns_record", [domain, reference])
+        return cast(Dict[str, Any], response)
 
     @staticmethod
     def _default_contact() -> Contact:
@@ -240,11 +245,15 @@ class MetanameClient:
         except MissingSecret:
             email = os.getenv("METANAME_CONTACT_EMAIL", "team@startmeup.nz")
 
-        name = _get_env_or_secret("METANAME_CONTACT_NAME", default="StartMeUp DNS")
+        name = _get_env_or_secret("METANAME_CONTACT_NAME", default="StartMeUp DNS") or "StartMeUp DNS"
         org = _get_env_or_secret("METANAME_CONTACT_ORG")
-        phone_country = _get_env_or_secret("METANAME_CONTACT_PHONE_COUNTRY", default="64")
+        phone_country = (
+            _get_env_or_secret("METANAME_CONTACT_PHONE_COUNTRY", default="64") or "64"
+        )
         phone_area = _get_env_or_secret("METANAME_CONTACT_PHONE_AREA")
-        phone_local = _get_env_or_secret("METANAME_CONTACT_PHONE_LOCAL", default="2345678")
+        phone_local = (
+            _get_env_or_secret("METANAME_CONTACT_PHONE_LOCAL", default="2345678") or "2345678"
+        )
 
         return Contact(
             name=name,
@@ -262,7 +271,7 @@ def _strip_trailing_dot(domain: str) -> str:
     return domain[:-1] if domain.endswith(".") else domain
 
 
-def _get_env_or_secret(name: str, default: str | None = None) -> str | None:
+def _get_env_or_secret(name: str, default: Optional[str] = None) -> Optional[str]:
     """Resolve ``name`` via 1Password with an environment-variable fallback."""
 
     try:
