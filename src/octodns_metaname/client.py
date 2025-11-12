@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Thin wrapper around the Metaname JSON-RPC API used by OctoDNS."""
+
+from __future__ import annotations
 
 import json
 import os
@@ -165,7 +165,8 @@ class MetanameClient:
     def ping(self) -> Dict[str, Any]:
         """Check authentication by querying the account balance."""
 
-        return self._rpc("account_balance", [])
+        response = self._rpc("account_balance", [])
+        return cast(Dict[str, Any], response)
 
     def list_zone_records(
         self, domain: str, *, page_size: Optional[int] = None
@@ -243,9 +244,12 @@ class MetanameClient:
         try:
             email = get_secret("METANAME_CONTACT_EMAIL")
         except MissingSecret:
-            email = os.getenv("METANAME_CONTACT_EMAIL", "team@startmeup.nz")
+            email = os.getenv("METANAME_CONTACT_EMAIL", "dns-ops@example.com")
 
-        name = _get_env_or_secret("METANAME_CONTACT_NAME", default="StartMeUp DNS") or "StartMeUp DNS"
+        name = (
+            _get_env_or_secret("METANAME_CONTACT_NAME", default="Metaname DNS Contact")
+            or "Metaname DNS Contact"
+        )
         org = _get_env_or_secret("METANAME_CONTACT_ORG")
         phone_country = (
             _get_env_or_secret("METANAME_CONTACT_PHONE_COUNTRY", default="64") or "64"
