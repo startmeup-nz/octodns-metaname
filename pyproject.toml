@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "octodns-metaname"
+version = "0.1.0"
+description = "OctoDNS provider for the Metaname DNS API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "OpsDev.nz" }]
+dependencies = [
+  "octodns>=1.5,<2.0",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "vcrpy>=6",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[project.entry-points."octodns.providers"]
+metaname = "octodns_metaname:MetanameProvider"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_ignores = true
+strict_optional = true
+namespace_packages = true
+packages = ["octodns_metaname"]
