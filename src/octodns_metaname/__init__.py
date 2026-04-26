@@ -42,7 +42,7 @@ except ImportError:  # pragma: no cover - default in test environment
             )
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 def _ensure_trailing_dot(value: str) -> str:
@@ -363,6 +363,3 @@ class MetanameProvider(BaseProvider):
             cache = {self._cache_key(record): record for record in records}
             self._zone_cache[domain] = cache
         return cache
-
-
-__all__ = ["MetanameProvider"]
