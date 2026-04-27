@@ -1,5 +1,7 @@
 """Helpers used in the octodns-metaname test suite."""
 
+from __future__ import annotations
+
 from typing import Optional
 
 

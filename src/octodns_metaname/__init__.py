@@ -1,5 +1,7 @@
 """OctoDNS provider implementation backed by the Metaname API."""
 
+from __future__ import annotations
+
 import logging
 import time
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple

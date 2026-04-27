@@ -65,11 +65,15 @@ resolver is loaded automatically. OpsDev.nz deployments point this at
 ## Development
 
 ```bash
-python -m venv venv && source venv/bin/activate
-pip install -e .[dev]
-ruff check src tests
-mypy src
-pytest --maxfail=1
+uv sync --extra dev
+uv run python -m pytest tests/ -v
+```
+
+To run linting and type checks:
+
+```bash
+uv run ruff check src tests
+uv run mypy src
 ```
 
 The repo includes a GitHub Actions workflow that runs linting, type checking,

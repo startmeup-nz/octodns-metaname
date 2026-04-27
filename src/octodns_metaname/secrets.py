@@ -8,6 +8,8 @@ and the value of ``<NAME>_REF`` (if present) and should return the resolved
 secret or ``None`` when it cannot help.
 """
 
+from __future__ import annotations
+
 import importlib
 import os
 from typing import Callable, Optional, cast
