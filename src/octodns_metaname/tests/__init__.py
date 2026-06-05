@@ -2,7 +2,7 @@
 Package exposing the pytest suites for documentation purposes.
 
 The concrete test modules live outside the installable package (under
-``modules/octodns_metaname/tests``). To make their docstrings available to
+``tests/``). To make their docstrings available to
 MkDocStrings, we load them dynamically and register them under the
 ``octodns_metaname.tests`` namespace.
 """
