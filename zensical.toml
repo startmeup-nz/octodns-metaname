@@ -1,0 +1,63 @@
+# ============================================================================
+# Zensical Configuration for octodns-metaname
+# ============================================================================
+
+[project]
+
+site_name = "octodns-metaname"
+site_description = "OctoDNS provider for Metaname DNS API"
+site_author = "OpsDev.NZ"
+site_url = ""
+copyright = "Copyright &copy; 2026 OpsDev.NZ"
+
+nav = [
+  { "Getting Started" = "index.md" },
+  { "Specification" = "specs/README.md" },
+  { "Functional Requirements" = "specs/functional-requirements.md" },
+  { "Non-Functional Requirements" = "specs/NFR.md" },
+  { "Design Decisions" = "design/README.md" },
+  { "User Stories" = "stories/README.md" },
+]
+
+language = "en"
+
+# ----------------------------------------------------------------------------
+# Theme Configuration
+# ----------------------------------------------------------------------------
+[project.theme]
+language = "en"
+
+# ----------------------------------------------------------------------------
+# Feature Toggles
+# ----------------------------------------------------------------------------
+features = [
+    "announce.dismiss",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.path",
+    "navigation.sections",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+]
+
+# ----------------------------------------------------------------------------
+# Color Palette
+# ----------------------------------------------------------------------------
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
