@@ -21,4 +21,5 @@ htmlcov/
 .vscode/
 build/
 dist/
+site/
 site-packages/

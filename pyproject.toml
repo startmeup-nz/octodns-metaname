@@ -7,7 +7,7 @@ name = "octodns-metaname"
 version = "0.1.1"
 description = "OpsDev.nz OctoDNS provider for the Metaname DNS API"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
@@ -22,7 +22,6 @@ classifiers = [
   "Intended Audience :: Developers",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -45,6 +44,7 @@ dev = [
   "twine>=5.1.1",
   "vcrpy>=6.0.1",
   "types-requests>=2.31.0.20240218",
+  "zensical>=0.0.45",
 ]
 test = [
   "pytest>=8.3.0",
@@ -68,13 +68,13 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_ignores = true
 strict_optional = true
