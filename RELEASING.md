@@ -1,62 +1,64 @@
 # Releasing `octodns-metaname`
 
-This repository publishes to TestPyPI first, then PyPI once smoke tests pass.
+All releases are automated through GitHub Actions and [Trusted Publishing
+(OIDC)](https://docs.pypi.org/trusted-publishers/). No API tokens are stored
+or managed — pushing a version tag triggers the pipeline.
+
+## Conventions
+
+| What | Rule |
+|------|------|
+| Versioning | [Semantic Versioning](https://semver.org) |
+| Tag format | `v<version>` (e.g. `v0.1.0`) |
+| Branch | `main` only — tags must point at a commit on `main` |
+| Auth | Trusted Publishing (OIDC) — no API tokens |
 
 ## Prerequisites
 
-- Access to the `startmeup-nz` TestPyPI / PyPI tokens (stored in 1Password).
-- `twine` and `build` are installed via `pip install -e .[dev]`.
-- You are on a clean `main` branch with CI green.
+- `uv` installed
+- Clean `main` branch, CI green
+- PyPI Trusted Publisher configured on Test PyPI and PyPI
 
-## Workflow
+## Release Workflow
 
-1. **Bump the Version**
-   - Update `project.version` inside `pyproject.toml`.
-   - Update any version references in documentation if needed.
+### 1. Prepare
 
-2. **Changelog**
-   - Add a new entry to `CHANGELOG.md` for every tagged version, even doc-only
-     releases, so there is always an auditable note.
+On a branch off `main`:
 
-3. **Tests**
-   ```
-   make check
-   ```
+```bash
+# Bump version in pyproject.toml
+version = "0.1.0"
 
-4. **Build the Distribution**
-   ```
-   rm -rf dist/
-   python -m build
-   python -m twine check dist/*
-   ```
+# Move changelog entries from [Unreleased] to [0.1.0]
+```
 
-5. **Publish to TestPyPI**
-   ```
-   python -m twine upload --repository testpypi dist/*
-   ```
-   - Try installing it with
-     ```
-     pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple octodns-metaname==<new-version>
-     ```
+### 2. Merge and tag
 
-6. **Publish to PyPI**
-   - After the TestPyPI install check passes, upload the same artifacts to PyPI:
-     ```
-     python -m twine upload --repository pypi dist/*
-     ```
-   - Smoke-test the PyPI build with
-     ```
-     pip install octodns-metaname==<new-version>
-     ```
+```bash
+git checkout main
+git pull origin main
+git tag -s v0.1.0 -m "v0.1.0"
+git push origin v0.1.0
+```
 
-7. **Tag + Push**
-   ```
-   git tag v<new-version>
-   git push origin main v<new-version>
-   ```
+### 3. Watch CI
 
-## CI/CD
+Pushing the tag fires `.github/workflows/publish.yml`:
 
-GitHub Actions runs lint, type-checking, tests, and a build on every push and
-pull request, so releases should only require the manual TestPyPI upload plus a
-tag.
+| Job | What it does |
+|-----|-------------|
+| `test-pypi` | Builds wheel, publishes to Test PyPI, smoke-tests the install |
+| `pypi` | Runs only if test-pypi passes, publishes to real PyPI |
+
+### 4. Verify
+
+```bash
+pip install octodns-metaname==0.1.0
+python -c "import octodns_metaname; print(octodns_metaname.__version__)"
+```
+
+## Dry-run releases
+
+To validate the pipeline without publishing to real PyPI, temporarily comment
+out the `pypi` job in `.github/workflows/publish.yml`, tag and push, then
+restore it after confirming Test PyPI succeeds.
