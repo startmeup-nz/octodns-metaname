@@ -290,7 +290,7 @@ class MetanameClient:
         domain:
             Domain name to register (trailing dot is stripped).
         term:
-            Registration term. Passed directly to Metaname's
+            Registration term in months. Passed directly to Metaname's
             ``register_domain_name`` term parameter.
         confirm:
             Safety guardrail — must be ``True``.
