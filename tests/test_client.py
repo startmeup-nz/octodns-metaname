@@ -34,11 +34,21 @@ class DummyResponse:
 def secrets(monkeypatch):
     """Ensure required secrets env vars resolve during tests."""
 
-    monkeypatch.setenv("METANAME_ACCOUNT_REF", "acc-1")
-    monkeypatch.setenv("METANAME_API_TOKEN", "token-1")
+    _secret_map = {
+        "METANAME_ACCOUNT_REF": "acc-1",
+        "METANAME_API_TOKEN": "token-1",
+        "METANAME_CONTACT_EMAIL": "test@example.com",
+        "METANAME_CONTACT_NAME": "Test User",
+        "METANAME_CONTACT_ORG": "Test Org",
+        "METANAME_CONTACT_PHONE_COUNTRY": "64",
+        "METANAME_CONTACT_PHONE_AREA": "21",
+        "METANAME_CONTACT_PHONE_LOCAL": "9876543",
+    }
+    for key, val in _secret_map.items():
+        monkeypatch.setenv(key, val)
     monkeypatch.setattr(
         "octodns_metaname.client.get_secret",
-        lambda name: {"METANAME_ACCOUNT_REF": "acc-1", "METANAME_API_TOKEN": "token-1"}[name],
+        lambda name: _secret_map[name],
     )
 
 
@@ -125,3 +135,173 @@ def test_iter_zone_records_pagination(monkeypatch, secrets):
     assert len(records) == 1
     assert isinstance(records[0], ZoneRecord)
     assert records[0].data == "1.2.3.4"
+
+
+# -- Domain lifecycle tests -------------------------------------------
+
+
+def test_check_domain(monkeypatch, secrets):
+    client = make_client(secrets)
+    calls = []
+
+    def fake_rpc(method, params, *, request_id=1):
+        calls.append((method, tuple(params)))
+        return {"available": True, "domain": params[0]}
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    result = client.check_domain("example.com")
+    assert calls == [("check_domain_name", ("example.com",))]
+    assert result["available"] is True
+
+
+def test_check_domain_strips_trailing_dot(monkeypatch, secrets):
+    client = make_client(secrets)
+    calls = []
+
+    def fake_rpc(method, params, *, request_id=1):
+        calls.append((method, tuple(params)))
+        return {"available": True}
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    client.check_domain("example.com.")
+    assert calls == [("check_domain_name", ("example.com",))]
+
+
+def test_register_domain_confirm_false_raises_valueerror(monkeypatch, secrets):
+    client = make_client(secrets)
+    with pytest.raises(ValueError, match="confirm=True"):
+        client.register_domain("example.com")
+
+
+def test_register_domain_domain_not_available_raises(monkeypatch, secrets):
+    client = make_client(secrets)
+
+    def fake_check(domain):
+        return {"available": False}
+
+    monkeypatch.setattr(client, "check_domain", fake_check)
+
+    with pytest.raises(MetanameError, match="not available for registration"):
+        client.register_domain("example.com", confirm=True)
+
+
+def test_register_domain_domain_available_implicit(monkeypatch, secrets):
+    client = make_client(secrets)
+    calls = []
+
+    def fake_rpc(method, params, *, request_id=1):
+        calls.append((method, tuple(params)))
+        if method == "check_domain_name":
+            return {"available": True}
+        if method == "register_domain_name":
+            return {"registered": True}
+        raise AssertionError("Unexpected method")
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    result = client.register_domain("example.com", confirm=True)
+
+    assert len(calls) == 2
+    assert calls[0] == ("check_domain_name", ("example.com",))
+    method, (domain, term, contacts, nameservers) = calls[1]
+    assert method == "register_domain_name"
+    assert domain == "example.com"
+    assert term == 12
+    assert set(contacts.keys()) == {"registrant", "admin", "technical"}
+    assert nameservers is None
+    assert result["status"] == "registered"
+
+
+def test_register_domain_custom_contacts_and_nameservers(monkeypatch, secrets):
+    client = make_client(secrets)
+    calls = []
+
+    def fake_rpc(method, params, *, request_id=1):
+        calls.append((method, tuple(params)))
+        if method == "check_domain_name":
+            return {"available": True}
+        if method == "register_domain_name":
+            return {"registered": True}
+        raise AssertionError("Unexpected method")
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    custom_contacts = {"registrant": {"name": "Test User"}}
+    custom_ns = ["ns1.example.com", "ns2.example.com"]
+
+    result = client.register_domain(
+        "example.com",
+        confirm=True,
+        term=24,
+        contacts=custom_contacts,
+        nameservers=custom_ns,
+    )
+
+    _, (domain, term, contacts, nameservers) = calls[1]
+    assert term == 24
+    assert contacts == custom_contacts
+    assert nameservers == custom_ns
+    assert result["status"] == "registered"
+
+
+def test_register_domain_check_returns_no_available_key(monkeypatch, secrets):
+    client = make_client(secrets)
+    calls = []
+
+    def fake_rpc(method, params, *, request_id=1):
+        calls.append((method, tuple(params)))
+        if method == "check_domain_name":
+            return {"some_other_key": "value"}
+        if method == "register_domain_name":
+            return {"registered": True}
+        raise AssertionError("Unexpected method")
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    result = client.register_domain("example.com", confirm=True)
+    assert result["status"] == "registered"
+
+
+def test_list_domains(monkeypatch, secrets):
+    client = make_client(secrets)
+    calls = []
+
+    def fake_rpc(method, params, *, request_id=1):
+        calls.append((method, tuple(params)))
+        return [
+            {"name": "example.com", "status": "active"},
+            {"name": "test.nz", "status": "active"},
+        ]
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    domains = client.list_domains()
+    assert calls == [("domain_names", ())]
+    assert len(domains) == 2
+    assert domains[0]["name"] == "example.com"
+
+
+def test_list_domains_non_list_result(monkeypatch, secrets):
+    client = make_client(secrets)
+
+    def fake_rpc(_method, _params, *, request_id=1):
+        return {"count": 0}
+
+    monkeypatch.setattr(client, "_rpc", fake_rpc)
+
+    domains = client.list_domains()
+    assert domains == []
+
+
+def test_registration_contacts_structure(monkeypatch, secrets):
+    client = make_client(secrets)
+    contacts = client._registration_contacts()
+
+    assert set(contacts.keys()) == {"registrant", "admin", "technical"}
+    for role in ("registrant", "admin", "technical"):
+        assert "name" in contacts[role]
+        assert "email_address" in contacts[role]
+        assert "postal_address" in contacts[role]
+        assert "phone_number" in contacts[role]

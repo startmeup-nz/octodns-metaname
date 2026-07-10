@@ -20,6 +20,8 @@ Each decision is documented with:
 | DD-002 | ruff vs black+isort | Accepted |
 | DD-003 | 100% test coverage requirement | Accepted |
 | DD-004 | Changelog management approach | Under Review |
+| DD-005 | Domain registration safety guardrail | Accepted |
+| DD-006 | Domain registration in MetanameClient vs MetanameProvider | Accepted |
 
 ## DD-001 - pyproject.toml vs setup.py
 
@@ -115,6 +117,56 @@ Each decision is documented with:
 - Need to update CONTRIBUTING.md
 - Migration of existing CHANGELOG.md entries
 - Training for contributors
+
+## DD-005 - Domain registration safety guardrail
+
+**Context:** Domain registration costs real money and is irreversible. Adding `register_domain()` to `MetanameClient` brings this mutating operation into a library used by CI pipelines and AI agent workflows.
+
+**Options:**
+
+1. Trust the caller — no guardrails, just document the danger
+2. Require explicit `confirm=True` — raise `ValueError` otherwise
+3. Use a separate class or client for registration (API surface segregation)
+
+**Decision:** Require `confirm=True`.
+
+**Rationale:**
+
+- Domain registration is the most expensive and irreversible operation the module performs
+- A `ValueError` on `confirm=False` is a loud, discoverable failure at development time, not a silent mistake at runtime
+- The guardrail survives refactoring (e.g. if an agent wraps `register_domain()` in a loop) because every call site must opt in
+- Consistent with the principle that mutating operations with financial cost should require explicit intent
+
+**Consequences:**
+
+- Every caller must pass `confirm=True` — a minor ergonomic cost
+- The guardrail is enforced in code, not just documentation, reducing the risk of accidental CI/automation registrations
+- The `register_domain()` method also internally calls `check_domain()` and refuses to proceed if the domain is not available
+
+## DD-006 - Domain registration in MetanameClient vs MetanameProvider
+
+**Context:** Domain registration (`register_domain_name` RPC) and domain listing (`domain_names` RPC) are Metaname API operations that sit outside the OctoDNS provider contract. We needed to decide where these methods belong in the module's class hierarchy.
+
+**Options:**
+
+1. Add to `MetanameProvider` — the OctoDNS provider class
+2. Add to `MetanameClient` — the lower-level JSON-RPC client wrapper
+3. Create a separate `MetanameRegistrar` class
+
+**Decision:** Add domain lifecycle methods to `MetanameClient`.
+
+**Rationale:**
+
+- `MetanameProvider` implements the OctoDNS `BaseProvider` interface (`populate`, `apply`, `SUPPORTS`). Domain registration is not a DNS zone operation — it's a Metaname-specific API call with no OctoDNS counterpart. Mixing it into the provider would blur the separation of concerns.
+- `MetanameClient` is the thin JSON-RPC wrapper that already owns authentication, secret resolution, and raw API calls. Registration methods (`check_domain_name`, `register_domain_name`, `domain_names`) are just more RPC methods — they fit naturally alongside `dns_zone`, `create_dns_record`, etc.
+- The standalone `scripts/metaname_register.py` script had its own duplicated secret resolution and HTTP logic. The `MetanameClient` already has all that plumbing — putting registration there eliminates the duplication.
+- A separate `MetanameRegistrar` class would add a new concept for only 3 methods, creating unnecessary API surface fragmentation.
+
+**Consequences:**
+
+- `MetanameClient` now has two concerns (DNS zone management + domain lifecycle), but both are thin wrappers over Metaname JSON-RPC methods that share the same auth and networking layer
+- Consumers who only need DNS zone management via the provider are unaffected — provider-only usage doesn't instantiate `MetanameClient` directly
+- `MetanameProvider` stays focused on the OctoDNS contract, preserving the clean OctoDNS provider surface
 
 ## Related
 

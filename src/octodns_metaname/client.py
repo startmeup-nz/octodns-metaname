@@ -239,6 +239,96 @@ class MetanameClient:
         response = self._rpc("delete_dns_record", [domain, reference])
         return cast(Dict[str, Any], response)
 
+    # -- Domain lifecycle ----------------------------------------------
+
+    def list_domains(self) -> list[Dict[str, Any]]:
+        """Return the domains registered under this account.
+
+        Uses Metaname's ``domain_names`` method, which reports every domain the
+        authenticated account owns (name, status, registration dates, name
+        servers and contacts).
+        """
+
+        result = self._rpc("domain_names", [])
+        if isinstance(result, list):
+            return cast("list[Dict[str, Any]]", result)
+        return []
+
+    def check_domain(self, domain: str) -> Dict[str, Any]:
+        """Check domain availability via Metaname.
+
+        Calls ``check_domain_name`` and returns the raw API response. Callers
+        inspect the result to determine whether the domain is available,
+        registered, or otherwise unavailable.
+        """
+
+        domain = _strip_trailing_dot(domain)
+        result = self._rpc("check_domain_name", [domain])
+        return cast(Dict[str, Any], result)
+
+    def register_domain(
+        self,
+        domain: str,
+        *,
+        term: int = 12,
+        confirm: bool = False,
+        contacts: Optional[Dict[str, Any]] = None,
+        nameservers: Optional[list[str]] = None,
+    ) -> Dict[str, Any]:
+        """Register ``domain`` via Metaname's ``register_domain_name`` method.
+
+        ``confirm`` must be set to ``True`` — domain registration costs real
+        money and is irreversible, so the guardrail prevents accidental calls
+        from automation or agent workflows.
+
+        Internally calls :meth:`check_domain` and raises :class:`MetanameError`
+        if the domain is not available, rather than trusting the caller to
+        pre-validate.
+
+        Parameters
+        ----------
+        domain:
+            Domain name to register (trailing dot is stripped).
+        term:
+            Registration term. Passed directly to Metaname's
+            ``register_domain_name`` term parameter.
+        confirm:
+            Safety guardrail — must be ``True``.
+        contacts:
+            Contact block keyed by role (``registrant``, ``admin``,
+            ``technical``). When ``None``, built from
+            :meth:`_default_contact`.
+        nameservers:
+            Optional list of name server hostnames. ``None`` uses Metaname
+            defaults.
+        """
+
+        if not confirm:
+            raise ValueError(
+                "register_domain() requires confirm=True. "
+                "Domain registration costs real money and is irreversible."
+            )
+
+        domain = _strip_trailing_dot(domain)
+        check = self.check_domain(domain)
+        if isinstance(check, dict) and check.get("available") is False:
+            raise MetanameError(
+                f"Domain '{domain}' is not available for registration."
+            )
+
+        if contacts is None:
+            contacts = self._registration_contacts()
+        result = self._rpc(
+            "register_domain_name", [domain, term, contacts, nameservers]
+        )
+        return {"domain": domain, "status": "registered", "result": result}
+
+    def _registration_contacts(self) -> Dict[str, Any]:
+        """Build the registrant/admin/technical contact block for registration."""
+
+        payload = self._default_contact().to_payload()
+        return {role: payload for role in ("registrant", "admin", "technical")}
+
     @staticmethod
     def _default_contact() -> Contact:
         try:
