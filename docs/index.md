@@ -70,6 +70,7 @@ octodns-sync --config-file=config.yaml
 - **[Specifications](specs/)** - Functional and non-functional requirements
 - **[Design Decisions](design/)** - Architecture and integration decisions
 - **[User Stories](stories/)** - Usage patterns and workflows
+- **[Testing](testing.md)** - Unit and integration test setup
 
 ## Development
 

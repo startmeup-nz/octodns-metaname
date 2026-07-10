@@ -63,8 +63,11 @@ Source = "https://github.com/startmeup-nz/octodns-metaname"
 Issues = "https://github.com/startmeup-nz/octodns-metaname/issues"
 
 [tool.pytest.ini_options]
-addopts = "--color=yes --durations=10"
+addopts = "--color=yes --durations=10 -m 'not registration'"
 testpaths = ["tests"]
+markers = [
+    "registration: integration test that registers a real domain (spends credit)",
+]
 
 [tool.ruff]
 line-length = 100
