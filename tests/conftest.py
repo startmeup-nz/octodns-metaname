@@ -4,11 +4,11 @@ Cassettes are recorded against the Metaname **test** API
 (https://test.metaname.net/api/1.1).  Credentials are read from the
 environment — they are *never* committed.
 """
+
 import json
 import os
 
 import pytest
-import vcr
 
 from octodns_metaname.client import TEST_API_URL, MetanameClient
 
@@ -47,15 +47,21 @@ def _jsonrpc_body_matcher(r1, r2):
     return b1.get("method") == b2.get("method") and params1 == params2
 
 
-_VCR = vcr.VCR(
-    cassette_library_dir=CASSETTE_DIR,
-    record_mode="once",
-    match_on=["method", "scheme", "host", "port", "path"],
-    before_record_request=_scrub_credentials,
-    filter_headers=["authorization"],
-)
-_VCR.register_matcher("jsonrpc-body", _jsonrpc_body_matcher)
-_VCR.match_on = ["method", "scheme", "host", "port", "path", "jsonrpc-body"]
+def _get_vcr():
+    """Lazy-init the VCR instance (avoids importing vcr at module level so
+    unit tests don't need vcrpy installed)."""
+    import vcr
+
+    v = vcr.VCR(
+        cassette_library_dir=CASSETTE_DIR,
+        record_mode="once",
+        match_on=["method", "scheme", "host", "port", "path"],
+        before_record_request=_scrub_credentials,
+        filter_headers=["authorization"],
+    )
+    v.register_matcher("jsonrpc-body", _jsonrpc_body_matcher)
+    v.match_on = ["method", "scheme", "host", "port", "path", "jsonrpc-body"]
+    return v
 
 
 @pytest.fixture(scope="class", autouse=True)
@@ -70,7 +76,7 @@ def _vcr_cassette(request):
         yield
         return
     name = cls.name
-    with _VCR.use_cassette(f"{name}.yaml") as cassette:
+    with _get_vcr().use_cassette(f"{name}.yaml") as cassette:
         yield cassette
 
 
