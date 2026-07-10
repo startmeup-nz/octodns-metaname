@@ -130,7 +130,7 @@ class MetanameClient:
     def _rpc(self, method: str, params: list[Any], *, request_id: int = 1) -> Any:
         """Call a JSON-RPC method and return the parsed ``result`` payload."""
 
-        payload = {
+        payload: dict[str, Any] = {
             "jsonrpc": "2.0",
             "method": method,
             "params": [self.account_ref, self.api_key, *params],
@@ -420,7 +420,7 @@ def _resolve_required_secret(name: str) -> str:
     try:
         value = get_secret(name)
     except MissingSecret:
-        value = os.getenv(name)
+        value = os.getenv(name) or ""
     if not value:
         raise MissingSecret(
             f"{name} is required for domain registration — "
