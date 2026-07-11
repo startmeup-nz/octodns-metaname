@@ -22,4 +22,5 @@ htmlcov/
 build/
 dist/
 site/
-site-packages/
+ site-packages/
+tests/cassettes/

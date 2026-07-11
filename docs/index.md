@@ -15,6 +15,7 @@ This provider allows you to manage your Metaname DNS zones using YAML configurat
 ## Features
 
 - Full support for Metaname DNS record types
+- Domain registration and availability checking
 - Zone synchronization with OctoDNS
 - Integration with 1Password for secret management (via op-opsdevnz)
 - Comprehensive test coverage
@@ -69,6 +70,7 @@ octodns-sync --config-file=config.yaml
 - **[Specifications](specs/)** - Functional and non-functional requirements
 - **[Design Decisions](design/)** - Architecture and integration decisions
 - **[User Stories](stories/)** - Usage patterns and workflows
+- **[Testing](testing.md)** - Unit and integration test setup
 
 ## Development
 

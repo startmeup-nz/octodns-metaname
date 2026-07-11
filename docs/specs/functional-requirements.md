@@ -19,20 +19,31 @@ The module SHALL support environment variable-based authentication (API key and 
 ### FR-5: 1Password Integration
 The module SHALL optionally integrate with op-opsdevnz for 1Password-based secret resolution.
 
+## Domain Lifecycle
+
+### FR-6: Domain Availability Check
+The module SHALL provide a `check_domain()` method that queries Metaname's `check_domain_name` RPC to determine domain availability.
+
+### FR-7: Domain Registration
+The module SHALL provide a `register_domain()` method that registers a domain via Metaname's `register_domain_name` RPC. Registration SHALL require an explicit `confirm=True` guardrail to prevent accidental registrations from automation workflows.
+
+### FR-8: Domain Listing
+The module SHALL provide a `list_domains()` method that lists all domains registered under the authenticated Metaname account.
+
 ## Testing
 
-### FR-6: Test Coverage
+### FR-9: Test Coverage
 The module SHALL maintain 100% test coverage to ensure reliability across two upstream dependencies.
 
-### FR-7: Network Isolation
+### FR-10: Network Isolation
 Tests SHALL use pytest-network to disable real network calls, with vcrpy for recorded API responses.
 
 ## Documentation
 
-### FR-8: User Documentation
+### FR-11: User Documentation
 The module SHALL provide comprehensive documentation including installation, configuration, and usage examples.
 
-### FR-9: API Documentation
+### FR-12: API Documentation
 The module SHALL document all public APIs and configuration options.
 
 ## Related

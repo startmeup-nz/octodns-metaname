@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-07-10
+### Added
+- `MetanameClient.check_domain()` — check domain availability via `check_domain_name` RPC.
+- `MetanameClient.register_domain()` — register a domain via `register_domain_name` RPC with a `confirm=True` safety guardrail that prevents accidental registration from automation workflows.
+- `MetanameClient.list_domains()` — list all domains under the authenticated account.
+- `MetanameClient._registration_contacts()` — build contact block from `_default_contact()` for domain registration.
+- Comprehensive test coverage for all new domain lifecycle methods.
+
+### Changed
+- `scripts/metaname_register.py` is now a thin deprecation wrapper around `MetanameClient.register_domain()`.
+
 ## [0.1.1] - 2025-11-13
 ### Added
 - README, CONTRIBUTING, RELEASING, CODEOWNERS, SECURITY, CODE_OF_CONDUCT, Makefile, requirements, and GitHub Actions CI so the repo matches other OpsDev packages.

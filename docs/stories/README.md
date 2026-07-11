@@ -22,6 +22,7 @@ Each story follows the format:
 | US-001 | DNS-as-Code workflow | Draft |
 | US-002 | 1Password secret management | Draft |
 | US-003 | CI/CD integration | Draft |
+| US-004 | Domain registration | Draft |
 
 ## Story: US-001 - DNS-as-Code workflow
 
@@ -80,6 +81,27 @@ Each story follows the format:
 - Should support both GitHub Actions and GitLab CI
 - Need to document CI/CD setup examples
 - Consider adding example workflow files
+
+## Story: US-004 - Domain registration
+
+**As a** platform engineer managing infrastructure
+**I want to** register domains via the Metaname API using the same client module I use for DNS zone management
+**So that** I can automate the full domain lifecycle in CI/CD without maintaining separate scripts
+
+**Acceptance Criteria:**
+
+- [ ] Can check domain availability via `MetanameClient.check_domain()`
+- [ ] Can register a domain via `MetanameClient.register_domain()` with `confirm=True`
+- [ ] Registration is guarded — calling without `confirm=True` raises `ValueError`
+- [ ] Registration refuses to proceed if `check_domain()` reports the domain as unavailable
+- [ ] Can list all domains on the account via `MetanameClient.list_domains()`
+- [ ] The standalone `scripts/metaname_register.py` is deprecated in favour of the client method
+
+**Notes:**
+
+- Domain registration costs real money — the `confirm=True` guardrail prevents accidental registrations from automation workflows
+- Contact details are sourced from `METANAME_CONTACT_*` environment variables or 1Password secrets
+- The deprecated script emits a `DeprecationWarning` and delegates to `MetanameClient`
 
 ## Related
 

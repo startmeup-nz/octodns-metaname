@@ -25,11 +25,11 @@ class Contact:
     phone_area_code: Optional[str]
     phone_local_number: str
     organisation: Optional[str] = None
-    address_line1: str = "123 Test Street"
+    address_line1: str = ""
     address_line2: Optional[str] = None
-    city: str = "Wellington"
+    city: str = ""
     region: Optional[str] = None
-    postal_code: str = "6011"
+    postal_code: str = ""
     country_code: str = "NZ"
 
     def to_payload(self) -> Dict[str, Any]:
@@ -130,7 +130,7 @@ class MetanameClient:
     def _rpc(self, method: str, params: list[Any], *, request_id: int = 1) -> Any:
         """Call a JSON-RPC method and return the parsed ``result`` payload."""
 
-        payload = {
+        payload: dict[str, Any] = {
             "jsonrpc": "2.0",
             "method": method,
             "params": [self.account_ref, self.api_key, *params],
@@ -239,25 +239,145 @@ class MetanameClient:
         response = self._rpc("delete_dns_record", [domain, reference])
         return cast(Dict[str, Any], response)
 
+    # -- Domain lifecycle ----------------------------------------------
+
+    def list_domains(self) -> list[Dict[str, Any]]:
+        """Return the domains registered under this account.
+
+        Uses Metaname's ``domain_names`` method, which reports every domain the
+        authenticated account owns (name, status, registration dates, name
+        servers and contacts).
+        """
+
+        result = self._rpc("domain_names", [])
+        if isinstance(result, list):
+            return cast("list[Dict[str, Any]]", result)
+        # Metaname's domain_names may return a non-list payload (e.g. an empty
+        # dict) when no domains exist under the account.  Treat that as an
+        # empty list rather than raising for a missing-account edge case.
+        return []
+
+    def check_domain(self, domain: str, *, source_ip: Optional[str] = None) -> str:
+        """Check domain availability via Metaname.
+
+        Calls ``check_availability`` and returns one of:
+
+        - ``"available"`` — the domain can be registered
+        - ``"taken"`` — the domain is already registered
+
+        Metaname may introduce more-specific status strings in future; any
+        string other than ``"available"`` means the domain cannot be
+        registered.
+
+        Parameters
+        ----------
+        domain:
+            Domain name to check (trailing dot is stripped).
+        source_ip:
+            IP address of the system making the request.  Pass the web
+            client IP when acting on behalf of a customer.  ``None`` is
+            fine for batch / system-originated checks.
+        """
+
+        domain = _strip_trailing_dot(domain)
+        result = self._rpc("check_availability", [domain, source_ip])
+        # _rpc wraps scalar results in {"value": ...}
+        if isinstance(result, dict) and "value" in result:
+            return str(result["value"])
+        return str(result)
+
+    def register_domain(
+        self,
+        domain: str,
+        *,
+        term: int = 12,
+        confirm: bool = False,
+        contacts: Optional[Dict[str, Any]] = None,
+        nameservers: Optional[list[str]] = None,
+    ) -> Dict[str, Any]:
+        """Register ``domain`` via Metaname's ``register_domain_name`` method.
+
+        ``confirm`` must be set to ``True`` — domain registration costs real
+        money and is irreversible, so the guardrail prevents accidental calls
+        from automation or agent workflows.
+
+        Internally calls :meth:`check_domain` and raises :class:`MetanameError`
+        unless the API explicitly returns ``"available"``.  This is a
+        **safe-by-default** guardrail — any other string (including new
+        statuses Metaname may introduce in future) is treated as *not
+        available* to avoid spending money on unintended registrations.
+
+        Parameters
+        ----------
+        domain:
+            Domain name to register (trailing dot is stripped).
+        term:
+            Registration term in months. Must be a positive integer.
+            For most non-NZ TLDs Metaname only accepts 12-month increments
+            (12, 24, 36 … 120).  For ``.nz`` names 1–120 months is
+            accepted.  See https://metaname.net/api/1.1/doc#Registration_terms
+            for the full registry-level rules.  This method validates the
+            value is an integer ≥ 1 but does not enforce specific increments.
+        confirm:
+            Safety guardrail — must be ``True``.
+        contacts:
+            Contact block keyed by role (``registrant``, ``admin``,
+            ``technical``). When ``None``, built from
+            :meth:`_default_contact`.
+        nameservers:
+            Optional list of name server hostnames.  When ``None``, a JSON
+            ``null`` is sent to the API, which Metaname interprets as *use
+            Metaname hosted DNS* — this is the documented default behaviour.
+        """
+
+        if not confirm:
+            raise ValueError(
+                "register_domain() requires confirm=True. "
+                "Domain registration costs real money and is irreversible."
+            )
+
+        if not isinstance(term, int) or term < 1:
+            raise ValueError(
+                f"term must be a positive integer, got {term!r}. "
+                "Check Metaname's current pricing for accepted term lengths."
+            )
+
+        domain = _strip_trailing_dot(domain)
+        check = self.check_domain(domain)
+        if check != "available":
+            raise MetanameError(
+                f"Domain '{domain}' is not available for registration "
+                f"(check_availability returned {check!r})."
+            )
+
+        if contacts is None:
+            contacts = self._registration_contacts()
+        result = self._rpc(
+            "register_domain_name", [domain, term, contacts, nameservers]
+        )
+        return {"domain": domain, "status": "registered", "result": result}
+
+    def _registration_contacts(self) -> Dict[str, Any]:
+        """Build the registrant/admin/technical contact block for registration."""
+
+        payload = self._default_contact().to_payload()
+        return {role: payload for role in ("registrant", "admin", "technical")}
+
     @staticmethod
     def _default_contact() -> Contact:
-        try:
-            email = get_secret("METANAME_CONTACT_EMAIL")
-        except MissingSecret:
-            email = os.getenv("METANAME_CONTACT_EMAIL", "dns-ops@example.com")
+        name = _resolve_required_secret("METANAME_CONTACT_NAME")
+        email = _resolve_required_secret("METANAME_CONTACT_EMAIL")
+        phone_country = _resolve_required_secret("METANAME_CONTACT_PHONE_COUNTRY")
+        phone_area = _resolve_required_secret("METANAME_CONTACT_PHONE_AREA")
+        phone_local = _resolve_required_secret("METANAME_CONTACT_PHONE_LOCAL")
+        address_line1 = _resolve_required_secret("METANAME_CONTACT_ADDRESS_LINE1")
+        city = _resolve_required_secret("METANAME_CONTACT_CITY")
+        postal_code = _resolve_required_secret("METANAME_CONTACT_POSTAL_CODE")
+        country_code = _resolve_required_secret("METANAME_CONTACT_COUNTRY_CODE")
 
-        name = (
-            _get_env_or_secret("METANAME_CONTACT_NAME", default="Metaname DNS Contact")
-            or "Metaname DNS Contact"
-        )
         org = _get_env_or_secret("METANAME_CONTACT_ORG")
-        phone_country = (
-            _get_env_or_secret("METANAME_CONTACT_PHONE_COUNTRY", default="64") or "64"
-        )
-        phone_area = _get_env_or_secret("METANAME_CONTACT_PHONE_AREA")
-        phone_local = (
-            _get_env_or_secret("METANAME_CONTACT_PHONE_LOCAL", default="2345678") or "2345678"
-        )
+        address_line2 = _get_env_or_secret("METANAME_CONTACT_ADDRESS_LINE2")
+        region = _get_env_or_secret("METANAME_CONTACT_REGION")
 
         return Contact(
             name=name,
@@ -266,6 +386,12 @@ class MetanameClient:
             phone_country_code=phone_country,
             phone_area_code=phone_area,
             phone_local_number=phone_local,
+            address_line1=address_line1,
+            address_line2=address_line2,
+            city=city,
+            region=region,
+            postal_code=postal_code,
+            country_code=country_code,
         )
 
 
@@ -282,3 +408,22 @@ def _get_env_or_secret(name: str, default: Optional[str] = None) -> Optional[str
         return get_secret(name)
     except MissingSecret:
         return os.getenv(name, default)
+
+
+def _resolve_required_secret(name: str) -> str:
+    """Return the value of ``name`` from secrets or env, or raise MissingSecret.
+
+    Used for contact fields that must be explicitly configured before a
+    domain registration can proceed — no baked-in defaults.
+    """
+
+    try:
+        value = get_secret(name)
+    except MissingSecret:
+        value = os.getenv(name) or ""
+    if not value:
+        raise MissingSecret(
+            f"{name} is required for domain registration — "
+            "set the env var or configure a secret resolver"
+        )
+    return value

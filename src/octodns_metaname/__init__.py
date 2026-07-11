@@ -42,7 +42,7 @@ except ImportError:  # pragma: no cover - default in test environment
             )
 
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 
 def _ensure_trailing_dot(value: str) -> str:
