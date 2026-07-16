@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-07-16
+### Added
+- `octodns-metaname` CLI for checking, listing, and explicitly registering domains.
+- Opt-in `auto_register_domains` provider setting for registering missing domains
+  during apply, with an additional production-only safeguard.
+
+### Changed
+- Registration messages now distinguish test credit from production charges.
+
 ## [0.2.0] - 2026-07-10
 ### Added
 - `MetanameClient.check_domain()` — check domain availability via `check_domain_name` RPC.

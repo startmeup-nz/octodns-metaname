@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import pytest
 
 from octodns_metaname import MetanameProvider
-from octodns_metaname.client import MetanameError, ZoneRecord
+from octodns_metaname.client import PROD_API_URL, TEST_API_URL, MetanameError, ZoneRecord
 
 
 class DummyZone:
@@ -26,8 +26,9 @@ def fake_record_factory(zone, name, data, source):
 class FakeClient:
     """Fake Metaname client that records actions for assertions."""
 
-    def __init__(self, records=None):
+    def __init__(self, records=None, base_url=TEST_API_URL):
         self.records = records or []
+        self.base_url = base_url
         self.actions = []
 
     def list_zone_records(self, domain):
@@ -39,6 +40,10 @@ class FakeClient:
 
     def delete_zone_record(self, domain, reference):
         self.actions.append(("delete", domain, reference))
+
+    def register_domain(self, domain, *, term, confirm):
+        self.actions.append(("register", domain, term, confirm))
+        return {"domain": domain, "status": "registered"}
 
 
 @dataclass
@@ -222,6 +227,94 @@ def test_apply_create_makes_api_calls():
     assert payload.rtype == "MX"
     assert payload.data == "mx1.forwardemail.net."
     assert payload.aux == 10
+
+
+def test_apply_missing_domain_requires_explicit_auto_registration():
+    client = FakeClient()
+    provider = MetanameProvider("metaname", client=client, sleep=lambda _: None)
+    provider._missing_zones.add("missing.nz")
+    record = FakeRecord(name="www", rtype="A", ttl=3600, values=["203.0.113.1"])
+
+    with pytest.raises(MetanameError, match="auto_register_domains: true"):
+        provider.apply(DummyPlan([Create(record)], "missing.nz."))
+
+    assert client.actions == []
+
+
+def test_apply_registers_missing_test_domain_before_records():
+    client = FakeClient()
+    provider = MetanameProvider(
+        "metaname",
+        client=client,
+        auto_register_domains=True,
+        registration_term=6,
+        sleep=lambda _: None,
+    )
+    provider._missing_zones.add("missing.nz")
+    record = FakeRecord(name="www", rtype="A", ttl=3600, values=["203.0.113.1"])
+
+    provider.apply(DummyPlan([Create(record)], "missing.nz."))
+
+    assert client.actions[0] == ("register", "missing.nz", 6, True)
+    assert client.actions[1][0:2] == ("create", "missing.nz")
+    assert "missing.nz" not in provider._missing_zones
+
+
+def test_apply_blocks_automatic_production_registration_without_second_guard():
+    client = FakeClient(base_url=PROD_API_URL)
+    provider = MetanameProvider(
+        "metaname",
+        client=client,
+        auto_register_domains=True,
+        sleep=lambda _: None,
+    )
+    provider._missing_zones.add("missing.nz")
+    record = FakeRecord(name="www", rtype="A", ttl=3600, values=["203.0.113.1"])
+
+    with pytest.raises(MetanameError, match="allow_production_registration: true"):
+        provider.apply(DummyPlan([Create(record)], "missing.nz."))
+
+    assert client.actions == []
+
+
+def test_apply_treats_unknown_endpoint_as_production_for_registration():
+    client = FakeClient(base_url="https://metaname-proxy.example/api")
+    provider = MetanameProvider(
+        "metaname",
+        client=client,
+        auto_register_domains=True,
+        sleep=lambda _: None,
+    )
+    provider._missing_zones.add("missing.nz")
+    record = FakeRecord(name="www", rtype="A", ttl=3600, values=["203.0.113.1"])
+
+    with pytest.raises(MetanameError, match="allow_production_registration: true"):
+        provider.apply(DummyPlan([Create(record)], "missing.nz."))
+
+    assert client.actions == []
+
+
+def test_apply_allows_explicit_automatic_production_registration():
+    client = FakeClient(base_url=PROD_API_URL)
+    provider = MetanameProvider(
+        "metaname",
+        client=client,
+        auto_register_domains=True,
+        allow_production_registration=True,
+        sleep=lambda _: None,
+    )
+    provider._missing_zones.add("missing.nz")
+    record = FakeRecord(name="www", rtype="A", ttl=3600, values=["203.0.113.1"])
+
+    provider.apply(DummyPlan([Create(record)], "missing.nz."))
+
+    assert client.actions[0] == ("register", "missing.nz", 12, True)
+    assert client.actions[1][0:2] == ("create", "missing.nz")
+
+
+def test_registration_term_must_be_positive_integer():
+    with pytest.raises(ValueError, match="registration_term must be a positive integer"):
+        MetanameProvider("metaname", client=FakeClient(), registration_term=0)
 
 
 def test_apply_delete_uses_cached_reference():
