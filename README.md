@@ -42,6 +42,42 @@ Populate/apply workflows follow the standard OctoDNS CLI tools. Consult the
 [OctoDNS docs](https://github.com/octodns/octodns/wiki/Usage) for full CLI
 details.
 
+### Domain lifecycle CLI
+
+Domain registration is separate from DNS record management. The CLI defaults
+to Metaname's test API:
+
+```bash
+octodns-metaname check example.nz
+octodns-metaname list
+octodns-metaname register example.nz --term 12 --confirm
+```
+
+Pass `--production` before the command to use the live API. Registration
+requires `--confirm` because it consumes test credit or incurs a production
+charge. Omitting `--nameserver` selects Metaname hosted DNS.
+
+### Optional registration during apply
+
+The provider can register a missing domain immediately before applying its
+records. This is disabled by default and should normally be enabled only for
+the test API:
+
+```yaml
+providers:
+  metaname-test:
+    class: octodns_metaname.MetanameProvider
+    base_url: https://test.metaname.net/api/1.1
+    auto_register_domains: true
+    registration_term: 12
+```
+
+The dry-run only reports the proposed records. Registration happens during the
+subsequent `octodns-sync --doit` apply. For the production API, an additional
+`allow_production_registration: true` safeguard is required. Prefer the CLI for
+an explicit availability check and registration before enabling production
+automation.
+
 ### Secret resolution
 
 By default the provider reads secrets directly from environment variables such

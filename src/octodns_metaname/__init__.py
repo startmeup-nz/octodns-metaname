@@ -5,6 +5,7 @@ import time
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple
 
 from .client import (
+    PROD_API_URL,
     TEST_API_URL,
     MetanameAPIError,
     MetanameClient,
@@ -18,6 +19,7 @@ __all__ = [
     "MetanameClient",
     "MetanameError",
     "MetanameProvider",
+    "PROD_API_URL",
     "TEST_API_URL",
     "ZoneRecord",
 ]
@@ -42,7 +44,7 @@ except ImportError:  # pragma: no cover - default in test environment
             )
 
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 def _ensure_trailing_dot(value: str) -> str:
@@ -80,6 +82,9 @@ class MetanameProvider(BaseProvider):
         *,
         client: Optional[MetanameClient] = None,
         base_url: Optional[str] = None,
+        auto_register_domains: bool = False,
+        registration_term: int = 12,
+        allow_production_registration: bool = False,
         retries: int = 3,
         retry_backoff: float = 1.0,
         sleep: Callable[[float], None] = time.sleep,
@@ -88,11 +93,17 @@ class MetanameProvider(BaseProvider):
     ) -> None:
         super().__init__(id, **kwargs)
         self.client = client or MetanameClient(base_url=base_url or TEST_API_URL)
+        self.auto_register_domains = auto_register_domains
+        self.registration_term = registration_term
+        self.allow_production_registration = allow_production_registration
+        if not isinstance(registration_term, int) or registration_term < 1:
+            raise ValueError("registration_term must be a positive integer")
         self.retries = max(1, retries)
         self.retry_backoff = max(0.0, retry_backoff)
         self._sleep = sleep
         self._record_factory = record_factory or OctoDNSRecord.new
         self._zone_cache: Dict[str, Dict[Tuple[str, str, str, Optional[int]], ZoneRecord]] = {}
+        self._missing_zones: set[str] = set()
 
     # -- OctoDNS hooks -------------------------------------------------
 
@@ -106,9 +117,12 @@ class MetanameProvider(BaseProvider):
         except MetanameError as exc:
             if "Domain name not found" in str(exc):
                 self.log.info("Metaname returned missing domain for %s; treating as empty", domain)
+                self._missing_zones.add(domain)
                 records = []
             else:
                 raise
+        else:
+            self._missing_zones.discard(domain)
         cache: Dict[Tuple[str, str, str, Optional[int]], ZoneRecord] = {}
         added = False
 
@@ -219,6 +233,9 @@ class MetanameProvider(BaseProvider):
             raise ValueError("Plan is missing zone metadata")
         domain = _strip_trailing_dot(zone_name)
 
+        if domain in self._missing_zones:
+            self._register_missing_domain(domain)
+
         for change in changes:
             action = change.__class__.__name__.lower()
             if action == "create":
@@ -238,6 +255,34 @@ class MetanameProvider(BaseProvider):
         return True
 
     # -- Internal helpers ----------------------------------------------
+
+    def _register_missing_domain(self, domain: str) -> None:
+        if not self.auto_register_domains:
+            raise MetanameError(
+                f"Domain '{domain}' is not registered with Metaname. Register it first "
+                "or explicitly set auto_register_domains: true on the provider."
+            )
+
+        base_url = getattr(self.client, "base_url", TEST_API_URL).rstrip("/")
+        if base_url != TEST_API_URL.rstrip("/") and not self.allow_production_registration:
+            raise MetanameError(
+                "Automatic domain registration outside the test API is disabled. Set "
+                "allow_production_registration: true as an additional explicit safeguard."
+            )
+
+        self.log.warning(
+            "Registering missing domain %s for %s month(s) before applying records",
+            domain,
+            self.registration_term,
+        )
+        # Do not wrap registration in the retry helper. A successful paid
+        # registration followed by a lost response must not be repeated.
+        self.client.register_domain(
+            domain,
+            term=self.registration_term,
+            confirm=True,
+        )
+        self._missing_zones.discard(domain)
 
     def _apply_create(self, domain: str, record: Any) -> None:
         for zone_record in self._octodns_record_to_metaname(record):

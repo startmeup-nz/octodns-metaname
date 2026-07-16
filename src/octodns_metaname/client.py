@@ -297,9 +297,9 @@ class MetanameClient:
     ) -> Dict[str, Any]:
         """Register ``domain`` via Metaname's ``register_domain_name`` method.
 
-        ``confirm`` must be set to ``True`` — domain registration costs real
-        money and is irreversible, so the guardrail prevents accidental calls
-        from automation or agent workflows.
+        ``confirm`` must be set to ``True`` — registration consumes test credit
+        on the test API or incurs a real charge on the production API, so the
+        guardrail prevents accidental calls from automation or agent workflows.
 
         Internally calls :meth:`check_domain` and raises :class:`MetanameError`
         unless the API explicitly returns ``"available"``.  This is a
@@ -333,7 +333,7 @@ class MetanameClient:
         if not confirm:
             raise ValueError(
                 "register_domain() requires confirm=True. "
-                "Domain registration costs real money and is irreversible."
+                "Registration consumes test credit or incurs a production charge."
             )
 
         if not isinstance(term, int) or term < 1:
