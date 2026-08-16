@@ -95,18 +95,34 @@ secrets.set_secret_resolver(resolve)
 
 For CLI usage set `OCTODNS_METANAME_SECRET_RESOLVER="module:function"` so the
 resolver is loaded automatically. OpsDev.nz deployments point this at
-`op_opsdevnz.octodns_hooks:resolve`, which returns values directly from the
-1Password Service Account SDK/CLI.
+`octodns_metaname.op_opsdevnz_hooks:resolve`, provided by the optional
+`onepassword` extra. The adapter uses `op-opsdevnz` for the underlying
+Service Account SDK/CLI resolution.
+
+Install the integration with:
+
+```bash
+pip install "octodns-metaname[onepassword]"
+```
 
 ## Development
 
 ```bash
-python -m venv venv && source venv/bin/activate
-pip install -e .[dev]
-ruff check src tests
-mypy src
-pytest --maxfail=1
+# Create/update the project environment from uv.lock
+uv sync --extra dev --extra onepassword
+
+# Run tools inside the project environment
+uv run ruff check src tests
+uv run mypy src
+uv run pytest --maxfail=1
+
+# Build the documentation site
+uv run zensical build
 ```
+
+The `onepassword` extra installs the optional `op-opsdevnz` integration used by
+the Metaname secret resolver. `uv run` ensures commands use the project
+environment rather than a user-level Python installation.
 
 The repo includes a GitHub Actions workflow that runs linting, type checking,
 tests, and a build on every push.

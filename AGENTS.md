@@ -15,8 +15,8 @@ committing.
 - Load credentials via environment files (e.g. `env/metaname-test.env` or `env/metaname-prod.env`).
 - Run `octodns-validate` / `octodns-sync` using configs in `octodns/configs/`.
 - CI environments rely on `_REF` variables pointing to 1Password references.
-- Secret resolution is handled by the `op_opsdevnz` package:
-  `OCTODNS_METANAME_SECRET_RESOLVER="op_opsdevnz.octodns_hooks:resolve"`
+- Secret resolution uses the optional `op-opsdevnz` integration:
+  `OCTODNS_METANAME_SECRET_RESOLVER="octodns_metaname.op_opsdevnz_hooks:resolve"`
 
 ## Git Signing
 

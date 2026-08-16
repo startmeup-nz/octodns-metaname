@@ -10,7 +10,9 @@ import os
 
 import pytest
 
+from octodns_metaname import secrets
 from octodns_metaname.client import TEST_API_URL, MetanameClient
+from octodns_metaname.secrets import MissingSecret
 
 CASSETTE_DIR = os.path.join(os.path.dirname(__file__), "cassettes")
 
@@ -80,16 +82,26 @@ def _vcr_cassette(request):
         yield cassette
 
 
-@pytest.fixture(scope="session")
-def live_credentials():
-    """Return (account_ref, api_token) or dummy values for cassette replay.
+@pytest.fixture
+def live_credentials(monkeypatch):
+    """Return credentials through the provider's configured resolver.
 
-    When env vars are present we record/re-record; when absent we fall
-    back to placeholders so VCR can replay from the cassette (the
-    cassette's scrubbed params are ignored during replay).
+    Direct values are accepted for local tests, while ``*_REF`` variables use
+    the same provider-owned resolver as the real OctoDNS workflow. When no
+    credentials or cassette are available, the integration test is skipped.
     """
-    ref = os.getenv("METANAME_ACCOUNT_REF")
-    token = os.getenv("METANAME_API_TOKEN")
+    if os.getenv("METANAME_ACCOUNT_REF_REF") or os.getenv("METANAME_API_TOKEN_REF"):
+        monkeypatch.setenv(
+            "OCTODNS_METANAME_SECRET_RESOLVER",
+            "octodns_metaname.op_opsdevnz_hooks:resolve",
+        )
+        secrets.clear_secret_resolver()
+
+    try:
+        ref = os.getenv("METANAME_ACCOUNT_REF") or secrets.get_secret("METANAME_ACCOUNT_REF")
+        token = os.getenv("METANAME_API_TOKEN") or secrets.get_secret("METANAME_API_TOKEN")
+    except MissingSecret:
+        ref = token = None
     if ref and token:
         return ref, token
     has_cassette = os.path.exists(
@@ -129,6 +141,11 @@ def test_client(live_credentials, monkeypatch):
     monkeypatch.setenv("METANAME_API_TOKEN", token)
     for name in _CONTACT_ENV_VARS:
         value = os.getenv(name)
+        if not value and os.getenv(f"{name}_REF"):
+            try:
+                value = secrets.get_secret(name)
+            except MissingSecret:
+                value = None
         if value:
             monkeypatch.setenv(name, value)
     return MetanameClient(base_url=TEST_API_URL)
