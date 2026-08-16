@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-08-16
+
+### Breaking
+
+- Raise the minimum supported Python version to 3.12 in line with OpsDev.nz
+  runtime policy. Development and verification target Python 3.14; older
+  supported runtimes are not part of the active test matrix.
+
+### Added
+
+- Provider-owned `octodns_metaname.op_opsdevnz_hooks:resolve` adapter for
+  optional 1Password integration through `op-opsdevnz`.
+
+### Changed
+
+- The `onepassword` extra now requires `op-opsdevnz>=0.2.0` on Python 3.12+
+  while retaining the provider's broader core Python compatibility.
+
 ## [0.2.1] - 2026-07-16
 ### Added
 - `octodns-metaname` CLI for checking, listing, and explicitly registering domains.

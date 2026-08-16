@@ -4,9 +4,9 @@ These tests use ``vcrpy`` to record/replay HTTP interactions.  The first
 run records cassettes under ``tests/cassettes/``.  Subsequent runs replay
 them offline — no API call is made and no credit is spent.
 
-Credentials are read from ``METANAME_ACCOUNT_REF`` /
-``METANAME_API_TOKEN``.  Credential values are scrubbed from recorded
-cassettes.
+Credentials are resolved from ``METANAME_ACCOUNT_REF`` /
+``METANAME_API_TOKEN`` or their ``*_REF`` counterparts through the configured
+provider resolver. Credential values are scrubbed from recorded cassettes.
 
 Markers
 -------

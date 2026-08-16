@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "octodns-metaname"
-version = "0.2.1"
+version = "0.3.0"
 description = "OpsDev.nz OctoDNS provider for the Metaname DNS API"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
@@ -22,10 +22,9 @@ classifiers = [
   "Intended Audience :: Developers",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
   "Topic :: Internet :: Name Service (DNS)",
 ]
@@ -51,7 +50,7 @@ test = [
   "pytest-cov>=5.0.0",
 ]
 onepassword = [
-  "op-opsdevnz>=0.1.4",
+    "op-opsdevnz>=0.2.1,<0.3.0",
 ]
 
 [project.entry-points."octodns.providers"]

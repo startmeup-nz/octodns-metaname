@@ -95,8 +95,15 @@ secrets.set_secret_resolver(resolve)
 
 For CLI usage set `OCTODNS_METANAME_SECRET_RESOLVER="module:function"` so the
 resolver is loaded automatically. OpsDev.nz deployments point this at
-`op_opsdevnz.octodns_hooks:resolve`, which returns values directly from the
-1Password Service Account SDK/CLI.
+`octodns_metaname.op_opsdevnz_hooks:resolve`, provided by the optional
+`onepassword` extra. The adapter uses `op-opsdevnz` for the underlying
+Service Account SDK/CLI resolution.
+
+Install the integration with:
+
+```bash
+pip install "octodns-metaname[onepassword]"
+```
 
 ## Development
 

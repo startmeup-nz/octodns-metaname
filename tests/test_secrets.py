@@ -49,3 +49,20 @@ def test_get_secret_with_env_loader():
     os.environ["TEST_SECRET_REF"] = "ref-env"
     os.environ["OCTODNS_METANAME_SECRET_RESOLVER"] = "octodns_metaname.testing_resolver:resolver"
     assert secrets.get_secret("TEST_SECRET") == "resolved-from-env"
+
+
+def test_get_secret_with_op_opsdevnz_resolver(monkeypatch):
+    import op_opsdevnz
+
+    os.environ["TEST_SECRET_REF"] = "op://Vault/Item/Field"
+    os.environ["OCTODNS_METANAME_SECRET_RESOLVER"] = (
+        "octodns_metaname.op_opsdevnz_hooks:resolve"
+    )
+
+    def fake_resolve_secret(**kwargs):
+        assert kwargs["secret_ref"] == "op://Vault/Item/Field"
+        assert kwargs["env_override"] == "TEST_SECRET"
+        return type("Resolution", (), {"value": "resolved-by-op-opsdevnz"})()
+
+    monkeypatch.setattr(op_opsdevnz, "resolve_secret", fake_resolve_secret)
+    assert secrets.get_secret("TEST_SECRET") == "resolved-by-op-opsdevnz"
