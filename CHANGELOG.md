@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- GitHub Actions workflow for deploying the Zensical documentation site to
+  GitHub Pages (`octodns-metaname.opsdev.nz`).
+
 ## [0.3.0] - 2026-08-16
 
 ### Breaking
