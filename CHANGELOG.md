@@ -8,6 +8,14 @@ All notable changes to this project will be documented in this file.
 
 - GitHub Actions workflow for deploying the Zensical documentation site to
   GitHub Pages (`octodns-metaname.opsdev.nz`).
+- `tests/test_version.py` — version consistency test ensuring `__version__`
+  matches pyproject.toml.
+
+### Fixed
+
+- Version now read from package metadata via `importlib.metadata` instead of
+  hardcoded string (was 0.2.1, pyproject.toml was 0.3.0). Matches pattern
+  used by oc-opsdevnz and worklog-opsdevnz.
 
 ## [0.3.0] - 2026-08-16
 
