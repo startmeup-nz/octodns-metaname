@@ -2,6 +2,7 @@
 
 import logging
 import time
+from importlib import metadata
 from typing import Any, Callable, Dict, Iterable, Optional, Tuple
 
 from .client import (
@@ -24,7 +25,7 @@ __all__ = [
     "ZoneRecord",
 ]
 
-try:  # pragma: no cover - exercised when octodns is installed
+try:
     from octodns.provider.base import BaseProvider  # type: ignore
     from octodns.record import Record as OctoDNSRecord  # type: ignore
 except ImportError:  # pragma: no cover - default in test environment
@@ -44,7 +45,10 @@ except ImportError:  # pragma: no cover - default in test environment
             )
 
 
-__version__ = "0.2.1"
+try:
+    __version__ = metadata.version("octodns-metaname")
+except metadata.PackageNotFoundError:
+    __version__ = "0.0.0+local"
 
 
 def _ensure_trailing_dot(value: str) -> str:
